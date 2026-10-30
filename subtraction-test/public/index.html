@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pattern Puzzles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:wght@600;700&family=JetBrains+Mono:wght@600;700&display=swap">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main>
+
+  <section id="screen-start" class="stack">
+    <span class="eyebrow">Pattern Puzzles</span>
+    <h1>Eight short puzzles</h1>
+    <p>Each puzzle is a grid of squares. Your job is to change the pattern so it matches the instructions. Work on your own, and don't reload the page until you see the finish screen.</p>
+    <form id="start-form" class="stack">
+      <label for="name">Your first name</label>
+      <input id="name" type="text" autocomplete="off" maxlength="40" required>
+      <div class="row"><button class="primary" type="submit">Start</button></div>
+      <p id="start-error" class="error" hidden></p>
+    </form>
+  </section>
+
+  <section id="screen-intro" class="stack" hidden>
+    <span class="eyebrow" id="intro-eyebrow">Part 1 of 2</span>
+    <h2>Instructions</h2>
+    <p>Make the pattern <strong>symmetrical from left to right and from top to bottom</strong>.</p>
+    <p>Click a square to switch it between filled and empty. When you're finished, press Done.</p>
+    <p id="intro-load" class="note" hidden>While you work, numbers will flash in the box above the grid. <strong>Count how many times you see the number 5.</strong> After each puzzle you'll be asked for your count.</p>
+    <div class="row"><button class="primary" id="intro-go" type="button">Begin</button></div>
+  </section>
+
+  <section id="screen-trial" class="stack" hidden>
+    <span class="eyebrow" id="trial-eyebrow">Puzzle 1 of 8</span>
+    <div class="stream" id="stream" hidden>
+      <span class="digit" id="digit" aria-live="off"></span>
+      <span class="hint">Count the 5s</span>
+    </div>
+    <div class="grid" id="grid" role="group" aria-label="Pattern grid"></div>
+    <p id="trial-note" class="note" hidden>This pattern isn't symmetrical yet. Keep working, or press Done again to hand it in as it is.</p>
+    <div class="row"><button class="primary" id="done" type="button">Done</button></div>
+  </section>
+
+  <section id="screen-count" class="stack" hidden>
+    <span class="eyebrow" id="count-eyebrow">Puzzle 1 of 8</span>
+    <h2>How many times did you see the number 5?</h2>
+    <form id="count-form" class="stack">
+      <label for="count">Your count</label>
+      <input id="count" type="number" min="0" max="99" inputmode="numeric" required>
+      <div class="row"><button class="primary" type="submit">Next</button></div>
+    </form>
+  </section>
+
+  <section id="screen-end" class="stack" hidden>
+    <span class="eyebrow">Finished</span>
+    <h1>All done. Thank you!</h1>
+    <p id="end-status" class="muted">Saving your answers…</p>
+    <div class="row"><button class="secondary" id="end-retry" type="button" hidden>Try saving again</button></div>
+  </section>
+
+</main>
+
+<script src="/puzzles.js"></script>
+<script>
+(() => {
+  const { N, setA, setB, isSymmetric } = window.Puzzles;
+  const $ = (id) => document.getElementById(id);
+  const screens = ['start', 'intro', 'trial', 'count', 'end'];
+  function show(name) {
+    for (const s of screens) $('screen-' + s).hidden = s !== name;
+    window.scrollTo(0, 0);
+  }
+
+  let session = null;     // {sessionId, name, order}
+  let plan = [];          // [{block, condition, puzzle}]
+  let step = 0;
+  let current = null;     // the trial in progress
+  const outbox = [];      // trials waiting to reach the server
+
+  // ---------- saving ----------
+  async function post(url, body) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'The server refused the request.');
+    return data;
+  }
+
+  let flushing = false;
+  async function flush() {
+    if (flushing) return;
+    flushing = true;
+    try {
+      while (outbox.length) {
+        try { await post('/api/trial', outbox[0]); outbox.shift(); }
+        catch { await new Promise((r) => setTimeout(r, 3000)); if (!$('screen-end').hidden) break; }
+      }
+    } finally {
+      flushing = false;
+      if (!$('screen-end').hidden) updateEnd();
+    }
+  }
+
+  function updateEnd() {
+    if (outbox.length === 0) {
+      $('end-status').textContent = 'Your answers are saved. You can close this page.';
+      $('end-retry').hidden = true;
+    } else {
+      $('end-status').textContent = `${outbox.length} answer${outbox.length === 1 ? '' : 's'} not saved yet: the page can't reach the class server. Keep this page open and tell your teacher.`;
+      $('end-retry').hidden = false;
+    }
+  }
+  $('end-retry').addEventListener('click', () => { $('end-status').textContent = 'Saving your answers…'; flush(); });
+
+  // ---------- start ----------
+  $('start-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = $('name').value.trim();
+    if (!name) return;
+    $('start-error').hidden = true;
+    try {
+      const r = await post('/api/start', { name });
+      session = { sessionId: r.sessionId, name, order: r.order };
+    } catch (err) {
+      $('start-error').textContent = "Couldn't reach the class server. Check you're on the school Wi-Fi, then press Start again.";
+      $('start-error').hidden = false;
+      return;
+    }
+    const first = session.order === 'noload-first' ? 'noload' : 'load';
+    const second = first === 'load' ? 'noload' : 'load';
+    plan = [
+      ...setA.map((p) => ({ block: 1, condition: first, puzzle: p })),
+      ...setB.map((p) => ({ block: 2, condition: second, puzzle: p })),
+    ];
+    step = 0;
+    showIntro();
+  });
+
+  window.addEventListener('beforeunload', (e) => {
+    if (session && $('screen-end').hidden) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  // ---------- block intro ----------
+  function showIntro() {
+    const t = plan[step];
+    $('intro-eyebrow').textContent = `Part ${t.block} of 2`;
+    $('intro-load').hidden = t.condition !== 'load';
+    show('intro');
+  }
+  $('intro-go').addEventListener('click', startTrial);
+
+  // ---------- number stream ----------
+  let streamTimer = null;
+  function startStream(trial) {
+    const digit = $('digit');
+    let last = 0;
+    const tick = () => {
+      let d;
+      if (Math.random() < 0.22) d = 5;
+      else { do { d = 1 + Math.floor(Math.random() * 9); } while (d === 5 || d === last); }
+      last = d;
+      digit.textContent = d;
+      if (d === 5) trial.loadTarget++;
+      streamTimer = setTimeout(() => {
+        digit.textContent = '';
+        streamTimer = setTimeout(tick, 250);
+      }, 750);
+    };
+    streamTimer = setTimeout(tick, 400);
+  }
+  function stopStream() { clearTimeout(streamTimer); streamTimer = null; $('digit').textContent = ''; }
+
+  // ---------- trial ----------
+  function startTrial() {
+    const t = plan[step];
+    current = {
+      ...t,
+      initial: t.puzzle.grid.map((r) => r.slice()),
+      grid: t.puzzle.grid.map((r) => r.slice()),
+      clicks: 0,
+      warned: false,
+      loadTarget: 0,
+      startedAt: performance.now(),
+    };
+    $('trial-eyebrow').textContent = `Puzzle ${step + 1} of ${plan.length}`;
+    $('trial-note').hidden = true;
+    renderGrid();
+    show('trial');
+    $('stream').hidden = t.condition !== 'load';
+    if (t.condition === 'load') startStream(current);
+  }
+
+  function renderGrid() {
+    const el = $('grid');
+    el.textContent = '';
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cell';
+      b.setAttribute('aria-label', `Row ${y + 1}, column ${x + 1}`);
+      b.setAttribute('aria-pressed', String(current.grid[y][x]));
+      b.dataset.y = y; b.dataset.x = x;
+      el.appendChild(b);
+    }
+  }
+
+  $('grid').addEventListener('click', (e) => {
+    const b = e.target.closest('.cell');
+    if (!b || !current) return;
+    const y = +b.dataset.y, x = +b.dataset.x;
+    current.grid[y][x] = !current.grid[y][x];
+    current.clicks++;
+    current.warned = false;
+    $('trial-note').hidden = true;
+    b.setAttribute('aria-pressed', String(current.grid[y][x]));
+  });
+
+  $('done').addEventListener('click', () => {
+    const symmetric = isSymmetric(current.grid);
+    if (!symmetric && !current.warned) {
+      current.warned = true;
+      $('trial-note').hidden = false;
+      return;
+    }
+    current.timeMs = Math.round(performance.now() - current.startedAt);
+    current.symmetric = symmetric;
+    if (current.condition === 'load') {
+      stopStream();
+      $('count-eyebrow').textContent = `Puzzle ${step + 1} of ${plan.length}`;
+      $('count').value = '';
+      show('count');
+      $('count').focus();
+    } else {
+      finishTrial(null);
+    }
+  });
+
+  $('count-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = parseInt($('count').value, 10);
+    if (Number.isNaN(v)) return;
+    finishTrial(v);
+  });
+
+  function finishTrial(loadAnswer) {
+    let added = 0, removed = 0;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      if (current.grid[y][x] && !current.initial[y][x]) added++;
+      if (!current.grid[y][x] && current.initial[y][x]) removed++;
+    }
+    let strategy;
+    if (!current.symmetric) strategy = 'unsolved';
+    else if (added === 0 && removed > 0) strategy = 'subtract';
+    else if (removed === 0 && added > 0) strategy = 'add';
+    else strategy = 'mixed';
+
+    outbox.push({
+      sessionId: session.sessionId,
+      name: session.name,
+      order: session.order,
+      block: current.block,
+      trial: step + 1,
+      puzzleId: current.puzzle.id,
+      condition: current.condition,
+      extras: current.puzzle.extras,
+      added,
+      removed,
+      clicks: current.clicks,
+      symmetric: current.symmetric,
+      strategy,
+      optimal: current.symmetric && added === 0 && removed === current.puzzle.extras,
+      timeMs: current.timeMs,
+      loadTarget: current.condition === 'load' ? current.loadTarget : null,
+      loadAnswer,
+      loadCorrect: current.condition === 'load' ? loadAnswer === current.loadTarget : null,
+    });
+    flush();
+
+    current = null;
+    step++;
+    if (step >= plan.length) { show('end'); flush(); }
+    else if (plan[step].block !== plan[step - 1].block) showIntro();
+    else startTrial();
+  }
+})();
+</script>
+</body>
+</html>

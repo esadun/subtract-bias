@@ -1,0 +1,13 @@
+{
+  "name": "symmetry-grid-test",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Classroom version of the symmetry-grid task (Adams, Converse, Hales & Klotz, 2021), with and without a number-counting load.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

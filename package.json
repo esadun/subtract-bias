@@ -1,0 +1,13 @@
+{
+  "name": "subtract-bias",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Classroom version of the symmetry-grid task (Adams, Converse, Hales & Klotz, 2021), with and without a number-counting load. Runs on Netlify.",
+  "dependencies": {
+    "@netlify/blobs": "11.1.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

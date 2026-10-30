@@ -1,0 +1,12 @@
+[build]
+  publish = "public"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# /teacher serves the results page.
+[[redirects]]
+  from = "/teacher"
+  to = "/teacher.html"
+  status = 200
