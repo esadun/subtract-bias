@@ -6,28 +6,21 @@ Students never see the words "subtract", "add" or "bias", and they don't see any
 
 ## Using it
 
-- **Students** open the class link, for example `https://your-site.netlify.app/?class=period3`, type their first name and do 8 puzzles. There's no login.
+- **Students** open the class link, for example `https://your-site.netlify.app/?class=period3`, type their first name and do 6 puzzles. There's no login.
 - **You** open `https://your-site.netlify.app/teacher`. Pick a class, or all classes, to see results. The page updates every 10 seconds. Use the "Student link" box there to make a link for each class.
 - **Archive this class** removes a class's results from the teacher page and moves them to an `archive` store, which you can still see in the Netlify dashboard under Blobs.
 
 ## Test design
 
-- **8 puzzles in two parts of 4.** One part is plain. In the other, digits flash above the grid; students count the 5s and type their count after each puzzle.
-- **Random order.** Each student's browser flips a coin to decide whether the load part comes first or second. The teacher page shows the actual split.
+- **6 puzzles in two parts of 3.** One part is plain. In the other, digits flash above the grid; students count the 5s and type their count after each puzzle.
+- **Random order.** Each student's browser flips a coin to decide whether the load part comes first or second.
 - **Puzzle sets.** Part 1 always uses puzzle set A and part 2 uses set B, so a puzzle set isn't tied to one condition.
 - **The puzzles are the same for every student.** They're generated from fixed seeds in `public/puzzles.js`. Each has 3 or 4 extra squares.
 - **Unsolved puzzles.** If a student presses Done on a pattern that isn't symmetrical, the page warns them once. A second press hands it in as it is.
 
-Each puzzle's solution is classed by comparing the final pattern with the starting one:
+Each puzzle is scored by comparing the student's final pattern with the starting one, so a square switched on and then off again doesn't count. A solved puzzle is **removed only** if every change took a square away, and **added only** if every change added one.
 
-| Solution | Meaning |
-|---|---|
-| Removed only | Symmetrical, and every change took a square away |
-| Added only | Symmetrical, and every change added a square |
-| Added and removed | Symmetrical, using both kinds of change |
-| Not symmetrical | Handed in without being solved |
-
-"Fewest possible changes" means the student removed exactly the extra squares and nothing else.
+The teacher page shows, for each condition, the share of solved puzzles that were removed-only and added-only, and the median time per puzzle. Its student table gives each student's removed-only count per condition. The stored records also keep mixed and unsolved hand-ins, and the 5s counts, in case you want them later.
 
 ## Deploying (Netlify + GitHub)
 
@@ -52,7 +45,7 @@ From then on, every push to `main` redeploys the site. Student results are kept 
 public/
   index.html         student test
   teacher.html       results page (/teacher)
-  puzzles.js         the eight puzzles and the symmetry check
+  puzzles.js         the six puzzles and the symmetry check
   style.css
 netlify/
   functions/

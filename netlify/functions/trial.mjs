@@ -4,7 +4,7 @@
 
 import { attempts, cleanClassId, json, readJson, SESSION_ID } from '../lib/store.mjs';
 
-const NUMBER_FIELDS = ['block', 'trial', 'extras', 'added', 'removed', 'clicks', 'timeMs'];
+const NUMBER_FIELDS = ['block', 'trial', 'extras', 'added', 'removed', 'timeMs'];
 
 export default async (req) => {
   if (req.method !== 'POST') return json({ error: 'Use POST.' }, 405);
@@ -21,7 +21,7 @@ export default async (req) => {
     for (const f of NUMBER_FIELDS) {
       if (!Number.isFinite(t[f])) return json({ error: `Missing ${f}.` }, 400);
     }
-    if (t.trial < 1 || t.trial > 8) return json({ error: 'Trial out of range.' }, 400);
+    if (t.trial < 1 || t.trial > 6) return json({ error: 'Trial out of range.' }, 400);
 
     // A retry after a lost reply can resend a trial; keep the first copy.
     if (!record.trials.some((x) => x.trial === t.trial)) {
@@ -33,7 +33,6 @@ export default async (req) => {
         extras: t.extras,
         added: t.added,
         removed: t.removed,
-        clicks: t.clicks,
         symmetric: t.symmetric === true,
         strategy: ['subtract', 'add', 'mixed', 'unsolved'].includes(t.strategy) ? t.strategy : 'unsolved',
         optimal: t.optimal === true,

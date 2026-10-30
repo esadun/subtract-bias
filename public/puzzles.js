@@ -3,7 +3,7 @@
 // then gets a few extra squares in one quarter. Removing those extras restores
 // symmetry in `extras` clicks; the additive fix (mirroring them into the other
 // three quarters) takes 3 × `extras` clicks.
-// Seeds are fixed, so every student sees the same eight puzzles.
+// Seeds are fixed, so every student sees the same six puzzles.
 
 (function () {
   const N = 10;
@@ -62,13 +62,11 @@
     makePuzzle('A1', 1101, 3),
     makePuzzle('A2', 2203, 4),
     makePuzzle('A3', 3307, 3),
-    makePuzzle('A4', 4409, 4),
   ];
   const setB = [
     makePuzzle('B1', 5501, 4),
     makePuzzle('B2', 6607, 3),
     makePuzzle('B3', 7703, 4),
-    makePuzzle('B4', 8809, 3),
   ];
 
   window.Puzzles = { N, setA, setB, isSymmetric };

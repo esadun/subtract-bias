@@ -15,7 +15,7 @@
 
   <section id="screen-start" class="stack">
     <span class="eyebrow">Pattern Puzzles</span>
-    <h1>Eight short puzzles</h1>
+    <h1>Six short puzzles</h1>
     <p>Each puzzle is a grid of squares. Your job is to change the pattern so it matches the instructions. Work on your own, and don't reload the page until you see the finish screen.</p>
     <form id="start-form" class="stack">
       <label for="name">Your first name</label>
@@ -35,7 +35,7 @@
   </section>
 
   <section id="screen-trial" class="stack" hidden>
-    <span class="eyebrow" id="trial-eyebrow">Puzzle 1 of 8</span>
+    <span class="eyebrow" id="trial-eyebrow">Puzzle 1 of 6</span>
     <div class="stream" id="stream" hidden>
       <span class="digit" id="digit" aria-live="off"></span>
       <span class="hint">Count the 5s</span>
@@ -46,7 +46,7 @@
   </section>
 
   <section id="screen-count" class="stack" hidden>
-    <span class="eyebrow" id="count-eyebrow">Puzzle 1 of 8</span>
+    <span class="eyebrow" id="count-eyebrow">Puzzle 1 of 6</span>
     <h2>How many times did you see the number 5?</h2>
     <form id="count-form" class="stack">
       <label for="count">Your count</label>
@@ -193,7 +193,6 @@
       ...t,
       initial: t.puzzle.grid.map((r) => r.slice()),
       grid: t.puzzle.grid.map((r) => r.slice()),
-      clicks: 0,
       warned: false,
       loadTarget: 0,
       startedAt: performance.now(),
@@ -225,7 +224,6 @@
     if (!b || !current) return;
     const y = +b.dataset.y, x = +b.dataset.x;
     current.grid[y][x] = !current.grid[y][x];
-    current.clicks++;
     current.warned = false;
     $('trial-note').hidden = true;
     b.setAttribute('aria-pressed', String(current.grid[y][x]));
@@ -278,7 +276,6 @@
       extras: current.puzzle.extras,
       added,
       removed,
-      clicks: current.clicks,
       symmetric: current.symmetric,
       strategy,
       optimal: current.symmetric && added === 0 && removed === current.puzzle.extras,

@@ -53,22 +53,10 @@
   <div class="table-wrap">
     <table>
       <thead><tr>
-        <th>Name</th><th>Class</th><th>Order</th><th>Puzzles</th>
-        <th>Removed only, no load</th><th>Removed only, load</th>
-        <th>Counting correct</th><th>Median time</th>
+        <th>Name</th><th>Class</th><th>Puzzles</th>
+        <th>Removed only, no load</th><th>Removed only, load</th><th>Median time</th>
       </tr></thead>
       <tbody id="students"></tbody>
-    </table>
-  </div>
-
-  <h2>Every puzzle</h2>
-  <div class="table-wrap">
-    <table>
-      <thead><tr>
-        <th>Time</th><th>Name</th><th>Class</th><th>#</th><th>Puzzle</th><th>Condition</th><th>Solution</th>
-        <th>Added</th><th>Removed</th><th>Clicks</th><th>Seconds</th><th>5s counted</th>
-      </tr></thead>
-      <tbody id="trials"></tbody>
     </table>
   </div>
 
@@ -183,42 +171,35 @@
     return n;
   }
 
-  function condCard(node, title, trials, isLoad) {
-    const solved = trials.filter((t) => t.symmetric);
-    const by = (s) => trials.filter((t) => t.strategy === s).length;
-    const sub = by('subtract');
+  // Percentages are of solved puzzles, so unsolved hand-ins don't skew them.
+  function condCard(node, title, trials) {
+    const solved = trials.filter((t) => t.symmetric).length;
+    const sub = trials.filter((t) => t.strategy === 'subtract').length;
+    const add = trials.filter((t) => t.strategy === 'add').length;
     node.textContent = '';
     node.append(el('span', { class: 'eyebrow' }, title));
-    node.append(el('div', { class: 'big' }, pct(sub, solved.length)));
+    node.append(el('div', { class: 'big' }, pct(sub, solved)));
     node.append(el('p', { class: 'muted' }, 'of solved puzzles fixed only by removing squares'));
-    node.append(el('div', { class: 'bar' }, el('span', { style: `width:${solved.length ? (100 * sub) / solved.length : 0}%` })));
+    node.append(el('div', { class: 'bar' }, el('span', { style: `width:${solved ? (100 * sub) / solved : 0}%` })));
     const facts = el('dl', { class: 'facts' });
-    const add = (k, v) => facts.append(el('dt', {}, k), el('dd', {}, v));
-    add('Puzzles done', String(trials.length));
-    add('Made symmetrical', pct(solved.length, trials.length));
-    add('Removed only', String(sub));
-    add('Added only', String(by('add')));
-    add('Added and removed', String(by('mixed')));
-    add('Not symmetrical', String(by('unsolved')));
-    add('Fewest possible changes', pct(trials.filter((t) => t.optimal).length, trials.length));
-    add('Median time', secs(median(trials.map((t) => t.timeMs))));
-    add('Median clicks', String(median(trials.map((t) => t.clicks)) ?? '–'));
-    if (isLoad) add('Counted the 5s correctly', pct(trials.filter((t) => t.loadCorrect).length, trials.length));
+    const fact = (k, v) => facts.append(el('dt', {}, k), el('dd', {}, v));
+    fact('Removed only', `${sub} (${pct(sub, solved)})`);
+    fact('Added only', `${add} (${pct(add, solved)})`);
+    fact('Median time', secs(median(trials.map((t) => t.timeMs))));
     node.append(facts);
   }
 
   function render(attempts) {
-    const trials = attempts.flatMap((a) => a.trials.map((t) => ({ ...t, name: a.name, classId: a.classId })));
+    const trials = attempts.flatMap((a) => a.trials);
     const noload = trials.filter((t) => t.condition === 'noload');
     const loadT = trials.filter((t) => t.condition === 'load');
-    const finished = attempts.filter((a) => a.trials.length >= 8).length;
-    const loadFirst = attempts.filter((a) => a.order === 'load-first').length;
+    const finished = attempts.filter((a) => a.trials.length >= 6).length;
     $('summary-line').textContent = attempts.length
-      ? `${attempts.length} student${attempts.length === 1 ? '' : 's'} started · ${finished} finished · ${trials.length} puzzles recorded · ${loadFirst} load-first, ${attempts.length - loadFirst} load-second`
+      ? `${attempts.length} student${attempts.length === 1 ? '' : 's'} started · ${finished} finished`
       : 'No students yet. Share a class link to get started.';
 
-    condCard($('card-noload'), 'Without the number stream', noload, false);
-    condCard($('card-load'), 'With the number stream', loadT, true);
+    condCard($('card-noload'), 'Without the number stream', noload);
+    condCard($('card-load'), 'With the number stream', loadT);
 
     const rate = (ts) => {
       const s = ts.filter((t) => t.symmetric);
@@ -238,36 +219,13 @@
       sb.append(el('tr', {},
         el('td', {}, s.name),
         el('td', {}, s.classId),
-        el('td', {}, s.order === 'noload-first' ? 'No load first' : 'Load first'),
-        el('td', { class: 'num' }, `${s.trials.length} / 8`),
+        el('td', { class: 'num' }, `${s.trials.length} / 6`),
         el('td', { class: 'num' }, subs(n)),
         el('td', { class: 'num' }, subs(l)),
-        el('td', { class: 'num' }, `${l.filter((t) => t.loadCorrect).length} / ${l.length}`),
         el('td', { class: 'num' }, secs(median(s.trials.map((t) => t.timeMs)))),
       ));
     }
-    if (!attempts.length) sb.append(el('tr', {}, el('td', { colspan: '8', class: 'muted' }, 'Students appear here as soon as they press Start.')));
-
-    const label = { subtract: 'Removed only', add: 'Added only', mixed: 'Added and removed', unsolved: 'Not symmetrical' };
-    const tb = $('trials');
-    tb.textContent = '';
-    for (const t of trials.sort((x, y) => y.at.localeCompare(x.at))) {
-      tb.append(el('tr', {},
-        el('td', { class: 'num' }, new Date(t.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
-        el('td', {}, t.name),
-        el('td', {}, t.classId),
-        el('td', { class: 'num' }, String(t.trial)),
-        el('td', {}, t.puzzleId),
-        el('td', {}, t.condition === 'load' ? 'Load' : 'No load'),
-        el('td', {}, el('span', { class: 'pill ' + t.strategy }, label[t.strategy] || t.strategy)),
-        el('td', { class: 'num' }, String(t.added)),
-        el('td', { class: 'num' }, String(t.removed)),
-        el('td', { class: 'num' }, String(t.clicks)),
-        el('td', { class: 'num' }, (t.timeMs / 1000).toFixed(1)),
-        el('td', { class: 'num' }, t.condition === 'load' ? `${t.loadAnswer} of ${t.loadTarget}` : '–'),
-      ));
-    }
-    if (!trials.length) tb.append(el('tr', {}, el('td', { colspan: '12', class: 'muted' }, 'Each finished puzzle shows up here.')));
+    if (!attempts.length) sb.append(el('tr', {}, el('td', { colspan: '6', class: 'muted' }, 'Students appear here as soon as they press Start.')));
   }
 })();
 </script>
