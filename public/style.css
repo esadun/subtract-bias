@@ -8,6 +8,7 @@
   --line: #d5dbd6;
   --cell-empty: #ffffff;
   --cell-fill: #23764f;
+  --axis: #1d2420;
   --accent: #23764f;
   --accent-ink: #ffffff;
   --warn: #9a5b00;
@@ -28,6 +29,7 @@
     --line: #34403a;
     --cell-empty: #222a26;
     --cell-fill: #4cb684;
+    --axis: #e6ebe7;
     --accent: #4cb684;
     --accent-ink: #0d1411;
     --warn: #f0b45a;
@@ -57,6 +59,12 @@ h1 { font-size: 2rem; font-weight: 700; }
 h2 { font-size: 1.35rem; font-weight: 600; }
 p { margin: 0; max-width: 62ch; }
 .muted { color: var(--muted); }
+.brand {
+  font: 700 1.15rem/1.2 var(--font-display);
+  color: var(--accent);
+  padding-bottom: 12px;
+  border-bottom: 1.5px solid var(--line);
+}
 .eyebrow {
   font: 600 0.78rem/1 var(--font-mono);
   letter-spacing: 0.08em;
@@ -113,7 +121,17 @@ button:disabled { opacity: 0.5; cursor: default; }
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
+  position: relative;
 }
+/* Crosshairs on the two lines of symmetry. They sit in the middle gaps and let clicks through. */
+.grid::before, .grid::after {
+  content: "";
+  position: absolute;
+  background: var(--axis);
+  pointer-events: none;
+}
+.grid::before { top: 0; bottom: 0; left: calc(50% - 1.5px); width: 3px; }
+.grid::after { left: 0; right: 0; top: calc(50% - 1.5px); height: 3px; }
 .cell {
   border: 0;
   padding: 0;
@@ -134,9 +152,12 @@ button:disabled { opacity: 0.5; cursor: default; }
   background: var(--surface);
   max-width: 440px;
 }
+/* Fixed box, so the blank gap between digits doesn't change the layout. */
 .stream .digit {
   font: 700 2.6rem/1 var(--font-mono);
   width: 2ch;
+  height: 1em;
+  flex: none;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }

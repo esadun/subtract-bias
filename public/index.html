@@ -11,6 +11,8 @@
 <body>
 <main>
 
+  <header class="brand">Count Elvio's World</header>
+
   <section id="screen-start" class="stack">
     <span class="eyebrow">Pattern Puzzles</span>
     <h1>Eight short puzzles</h1>
@@ -174,10 +176,11 @@
       last = d;
       digit.textContent = d;
       if (d === 5) trial.loadTarget++;
+      // Each digit shows for 1.2 s, then a 0.4 s blank.
       streamTimer = setTimeout(() => {
         digit.textContent = '';
-        streamTimer = setTimeout(tick, 250);
-      }, 750);
+        streamTimer = setTimeout(tick, 400);
+      }, 1200);
     };
     streamTimer = setTimeout(tick, 400);
   }
